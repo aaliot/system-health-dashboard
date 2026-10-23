@@ -16,7 +16,7 @@ def test_health(client):
 def test_version(client):
     response = client.get('/version')
     assert response.status_code == 200
-    assert response.get_json() == {"version": "1.0.0"}
+    assert response.get_json() == {"version": "1.0.1"}
 
 def test_environment(client, monkeypatch):
     monkeypatch.setenv("APP_ENV", "testing")

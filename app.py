@@ -9,7 +9,8 @@ def health_check():
 
 @app.route('/version')
 def version():
-    return jsonify({"version": "2.0.0"})
+    return jsonify({"version": "1.0.1"})
+
 
 @app.route('/environment')
 def environment():
