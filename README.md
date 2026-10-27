@@ -105,3 +105,30 @@ I used Claude to help plan the project phases, explain Git, Docker and Jenkins c
 2. **Where did automation detect or prevent an error?** In Jenkins build #3 I deliberately broke `test_health`. The Test stage failed, and the Build, Tag and Health check stages were skipped, so no image was built from broken code. After I reverted the commit, build #4 passed.
 3. **What would I change before using this workflow in production?** Pin one Python version everywhere (Jenkins tested on 3.13 but the image uses 3.11), stop mounting the Docker socket into Jenkins, push images to a registry, add a real deploy stage, and require reviews and passing checks before merging into `main`.
 4. **Which step still depends on manual action, and how could it be automated?** I start Jenkins builds by clicking Build Now. A GitHub webhook (or a multibranch pipeline) would trigger a build automatically on every push or pull request. Merging and deploying are also manual.
+
+## Workflow issues and fixes
+
+While working I made mistakes with pull requests. I corrected each one
+without hiding it, and the history shows what happened.
+
+ **The first `develop` to `main` PR was merged before an external review.**
+   I merged too early. To fix it, I made one further README change on a
+   feature branch, merged it into `develop`, and opened the final
+   `develop` to `main` pull request.
+
+## Evidence
+
+### Successful Jenkins pipeline
+![Successful Jenkins pipeline, all stages green](docs/screenshots/jenkins-success.png)
+
+### Failing test stops the pipeline (build #3)
+![Build 3: Test stage failed, later stages skipped](docs/screenshots/jenkins-failure.png)
+
+### Failing test stops the pipeline (build #3)
+![Build 4: Test stage error fixed, all stages green](docs/screenshots/jenkins-fix.png) 
+
+### Merge conflict history
+![Commit graph showing the conflict and merge](docs/screenshots/merge-graph.png)
+
+### Jira Board
+![Jira board showing how I planned the task](docs/screenshots/jira-board.png)
