@@ -1,0 +1,19 @@
+services:
+  app-production:
+    image: system-health-dashboard:${IMAGE_TAG:?IMAGE_TAG must be set}
+    container_name: app-production
+    restart: unless-stopped
+    ports:
+      - "5002:5000"
+    environment:
+      ENVIRONMENT: production
+      ENABLE_FAULT_INJECTION: "false"
+    labels:
+      app: system-health
+      environment: production
+    networks:
+      - health-net
+
+networks:
+  health-net:
+    external: true

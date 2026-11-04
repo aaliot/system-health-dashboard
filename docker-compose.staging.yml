@@ -1,0 +1,19 @@
+services:
+  app-staging:
+    image: system-health-dashboard:${IMAGE_TAG:?IMAGE_TAG must be set}
+    container_name: app-staging
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    environment:
+      ENVIRONMENT: staging
+      ENABLE_FAULT_INJECTION: ${ENABLE_FAULT_INJECTION:-false}
+    labels:
+      app: system-health
+      environment: staging
+    networks:
+      - health-net
+
+networks:
+  health-net:
+    external: true
