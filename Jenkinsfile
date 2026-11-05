@@ -1,9 +1,21 @@
+def safeBranch() {
+    return env.BRANCH_NAME.replaceAll('[^A-Za-z0-9_.-]', '-')
+}
+
+def deploysToStaging() {
+    return env.BRANCH_NAME in ['develop', 'main'] || env.BRANCH_NAME.startsWith('feature/')
+}
+
 pipeline {
     agent any
+    options {
+        disableConcurrentBuilds()
+    }
     environment {
         IMAGE_NAME = 'system-health-dashboard'
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
-        CONTAINER_NAME = "health-check-${env.BUILD_NUMBER}"
+        IMAGE_TAG = "${safeBranch()}-${env.BUILD_NUMBER}"
+        CONTAINER_NAME = "health-check-${safeBranch()}-${env.BUILD_NUMBER}"
+        STATE_DIR = '/var/jenkins_home/release-state'
     }
     stages {
         stage('Checkout') {
@@ -50,10 +62,66 @@ pipeline {
                 '''
             }
         }
+        stage('Deploy to Staging') {
+            when { expression { deploysToStaging() } }
+            steps {
+                script { env.STAGING_DEPLOYED = 'true' }
+                sh './scripts/deploy.sh staging ${IMAGE_TAG}'
+            }
+        }
+        stage('Smoke test (staging)') {
+            when { expression { deploysToStaging() } }
+            steps {
+                sh './scripts/smoke_test.sh http://app-staging:5000'
+            }
+        }
+        stage('Verify monitoring') {
+            when { expression { deploysToStaging() } }
+            steps {
+                sh './scripts/verify_monitoring.sh staging http://prometheus:9090'
+            }
+        }
+        stage('Approval gate') {
+            when { branch 'main' }
+            steps {
+                timeout(time: 30, unit: 'MINUTES') {
+                    script {
+                        env.APPROVER = input(
+                            message: "Deploy ${IMAGE_NAME}:${IMAGE_TAG} to production?",
+                            ok: 'Deploy to production',
+                            submitterParameter: 'APPROVER'
+                        )
+                        echo "Release ${IMAGE_TAG} approved by ${env.APPROVER}"
+                    }
+                }
+            }
+        }
+        stage('Deploy to Production') {
+            when { branch 'main' }
+            steps {
+                script { env.PRODUCTION_DEPLOYED = 'true' }
+                sh './scripts/deploy.sh production ${IMAGE_TAG}'
+            }
+        }
+        stage('Smoke test (production)') {
+            when { branch 'main' }
+            steps {
+                sh './scripts/smoke_test.sh http://app-production:5000'
+            }
+        }
     }
     post {
         always {
             sh 'docker rm -f ${CONTAINER_NAME} || true'
+        }
+        failure {
+            script {
+                if (env.PRODUCTION_DEPLOYED == 'true') {
+                    sh './scripts/rollback.sh production'
+                } else if (env.STAGING_DEPLOYED == 'true') {
+                    sh './scripts/rollback.sh staging'
+                }
+            }
         }
     }
 }
