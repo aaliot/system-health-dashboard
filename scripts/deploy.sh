@@ -12,6 +12,11 @@ CONTAINER="app-${ENV_NAME}"
 
 mkdir -p "$STATE_DIR"
 
+# Only one deploy per environment at a time, even across different branch builds.
+# The lock is released automatically when this script exits.
+exec 9>"$STATE_DIR/${ENV_NAME}.lock"
+flock 9
+
 if docker inspect "$CONTAINER" > /dev/null 2>&1; then
   RUNNING_IMAGE="$(docker inspect --format '{{.Config.Image}}' "$CONTAINER")"
   RUNNING_TAG="${RUNNING_IMAGE##*:}"
