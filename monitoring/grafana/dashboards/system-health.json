@@ -1,0 +1,61 @@
+{
+  "id": null,
+  "uid": "system-health-overview",
+  "title": "System Health Overview",
+  "tags": [
+    "system-health"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "10s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "label": "Environment",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(up{job=\"system-health\"}, environment)",
+          "refId": "env"
+        },
+        "definition": "label_values(up{job=\"system-health\"}, environment)",
+        "refresh": 1,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {"id":1,"type":"stat","title":"Service status","description":"1 = Prometheus can scrape the environment, 0 = it cannot.","datasource":{"type":"prometheus","uid":"prometheus"},"gridPos":{"x":0,"y":0,"w":8,"h":5},"targets":[{"refId":"A","datasource":{"type":"prometheus","uid":"prometheus"},"expr":"up{job=\"system-health\", environment=~\"$environment\"}","legendFormat":"{{environment}}","instant":true,"range":false}],"fieldConfig":{"defaults":{"mappings":[{"type":"value","options":{"1":{"text":"UP","color":"green","index":0},"0":{"text":"DOWN","color":"red","index":1}}}],"thresholds":{"mode":"absolute","steps":[{"color":"red","value":null},{"color":"green","value":1}]},"color":{"mode":"thresholds"}},"overrides":[]},"options":{"colorMode":"background","graphMode":"none","textMode":"value_and_name","reduceOptions":{"calcs":["lastNotNull"],"fields":"","values":false}}},
+    {"id":5,"type":"table","title":"Application info","description":"Running version and environment, from the app_info metric.","datasource":{"type":"prometheus","uid":"prometheus"},"gridPos":{"x":8,"y":0,"w":16,"h":5},"targets":[{"refId":"A","datasource":{"type":"prometheus","uid":"prometheus"},"expr":"app_info{environment=~\"$environment\"}","legendFormat":"","instant":true,"range":false,"format":"table"}],"transformations":[{"id":"organize","options":{"excludeByName":{"Time":true,"__name__":true,"Value":true,"job":true},"renameByName":{"exported_environment":"app environment","environment":"target environment"}}}],"fieldConfig":{"defaults":{},"overrides":[]},"options":{"showHeader":true}},
+    {"id":2,"type":"timeseries","title":"Request rate","description":"Requests per second by endpoint.","datasource":{"type":"prometheus","uid":"prometheus"},"gridPos":{"x":0,"y":5,"w":12,"h":8},"targets":[{"refId":"A","datasource":{"type":"prometheus","uid":"prometheus"},"expr":"sum by (endpoint, environment) (rate(http_requests_total{environment=~\"$environment\"}[1m]))","legendFormat":"{{environment}} {{endpoint}}"}],"fieldConfig":{"defaults":{"unit":"reqps","custom":{"lineWidth":2,"fillOpacity":10}},"overrides":[]},"options":{"legend":{"displayMode":"list","placement":"bottom","showLegend":true},"tooltip":{"mode":"multi","sort":"none"}}},
+    {"id":3,"type":"timeseries","title":"Error rate %","description":"Share of responses with a 5xx status over 2 minutes. The red line is the 5% alert threshold.","datasource":{"type":"prometheus","uid":"prometheus"},"gridPos":{"x":12,"y":5,"w":12,"h":8},"targets":[{"refId":"A","datasource":{"type":"prometheus","uid":"prometheus"},"expr":"100 * (sum by (environment) (rate(http_requests_total{environment=~\"$environment\", status=~\"5..\"}[2m])) or 0 * sum by (environment) (rate(http_requests_total{environment=~\"$environment\"}[2m]))) / sum by (environment) (rate(http_requests_total{environment=~\"$environment\"}[2m]))","legendFormat":"{{environment}}"}],"fieldConfig":{"defaults":{"unit":"percent","custom":{"lineWidth":2,"fillOpacity":10,"thresholdsStyle":{"mode":"line"}},"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null},{"color":"red","value":5}]}},"overrides":[]},"options":{"legend":{"displayMode":"list","placement":"bottom","showLegend":true},"tooltip":{"mode":"multi","sort":"none"}}},
+    {"id":4,"type":"timeseries","title":"Latency p95","description":"95th percentile request latency per endpoint.","datasource":{"type":"prometheus","uid":"prometheus"},"gridPos":{"x":0,"y":13,"w":24,"h":8},"targets":[{"refId":"A","datasource":{"type":"prometheus","uid":"prometheus"},"expr":"histogram_quantile(0.95, sum by (le, endpoint, environment) (rate(http_request_duration_seconds_bucket{environment=~\"$environment\"}[5m])))","legendFormat":"{{environment}} {{endpoint}}"}],"fieldConfig":{"defaults":{"unit":"s","custom":{"lineWidth":2,"fillOpacity":10}},"overrides":[]},"options":{"legend":{"displayMode":"list","placement":"bottom","showLegend":true},"tooltip":{"mode":"multi","sort":"none"}}},
+    {"id":6,"type":"logs","title":"Application logs","description":"Recent request logs for the selected environment (Prometheus scrapes of /metrics are hidden).","datasource":{"type":"loki","uid":"loki"},"gridPos":{"x":0,"y":21,"w":12,"h":10},"targets":[{"refId":"A","datasource":{"type":"loki","uid":"loki"},"expr":"{app=\"system-health\", environment=~\"$environment\"} | json | endpoint != \"/metrics\"","queryType":"range"}],"options":{"showTime":true,"wrapLogMessage":true,"prettifyLogMessage":false,"enableLogDetails":true,"sortOrder":"Descending","dedupStrategy":"none"}},
+    {"id":7,"type":"logs","title":"Error logs","description":"Only ERROR level lines for the selected environment.","datasource":{"type":"loki","uid":"loki"},"gridPos":{"x":12,"y":21,"w":12,"h":10},"targets":[{"refId":"A","datasource":{"type":"loki","uid":"loki"},"expr":"{app=\"system-health\", environment=~\"$environment\"} | json | level=\"ERROR\"","queryType":"range"}],"options":{"showTime":true,"wrapLogMessage":true,"prettifyLogMessage":false,"enableLogDetails":true,"sortOrder":"Descending","dedupStrategy":"none"}}
+  ]
+}
