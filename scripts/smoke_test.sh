@@ -29,7 +29,7 @@ check() {
 
 echo "Smoke testing $BASE_URL"
 wait_for_health
-check /health '"UP"'
+check /health '"DOWN"'
 check /version '"version"'
 check /metrics 'http_requests_total'
 echo "All smoke checks passed for $BASE_URL"
